@@ -1,2 +1,12 @@
+.DS_Store
+.RData
+.Rhistory
 ^.*\.Rproj$
+^.lintr$
+^.zed$
+^LICENSE\.md$
 ^\.Rproj\.user$
+^_.*$
+^data-raw$
+^justfile$
+^man-roxygen$

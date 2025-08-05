@@ -1,16 +1,37 @@
 Package: SnailBLAST
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
+Title: SnailBLAST: Parallel BLAST Search Faster than a Speeding Snail
+Version: 1.0.0
 Authors@R: c(
     person(
-      "Jane", "Doe",
-      email = "jane@example.com",
-      role = c("aut", "cre")
+      "Ryan", "Moore",
+      email = "moorer@udel.edu",
+      role = c("aut", "cre"),
+      comment = c(ORCID = "0000-0003-3337-8184")
     )
   )
-Description: More about what it does (maybe more than one line).
-    Continuation lines should be indented.
-License: What license is it under?
+Description: Launches BLAST+ searches across multiple query files and subject
+    databases using parallel processing. Designed for workflows
+    that need to crunch through tons of comparisons, SnailBLAST handles job
+    orchestration, result merging, and error handling. Faster than a speeding
+    snail, but just as reliable.
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+Imports:
+    checkmate,
+    dplyr,
+    future.apply,
+    processx,
+    rlang
+RoxygenNote: 7.3.2
+Depends:
+    R (>= 4.1.0)
+Suggests:
+    future,
+    readr,
+    rprojroot,
+    testthat (>= 4.1.0),
+    tibble,
+    usethis
+Config/testthat/edition: 3
