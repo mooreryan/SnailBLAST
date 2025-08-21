@@ -1,0 +1,72 @@
+---
+title: "Format Specifiers"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{format-specifiers}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+The following table shows the names for the BLAST format specifiers you can use, along with the long version of the format specifier (which are used when the `use_long_names_in_parsed_result = TRUE` argument is passed to `crawl`), the empty values, and the `readr` types that will be used when reading the BLAST output files.
+
+|   Short        |   Long                               |   Empty Value   |   Type                    |
+|----------------|--------------------------------------|-----------------|---------------------------|
+|   qseqid       |   query_seq_id                       |   character(0)  |   readr::col_character()  |
+|   qgi          |   query_gi                           |   character(0)  |   readr::col_character()  |
+|   qacc         |   query_accession                    |   character(0)  |   readr::col_character()  |
+|   qaccver      |   query_accession_version            |   character(0)  |   readr::col_character()  |
+|   qlen         |   query_sequence_length              |   integer(0)    |   readr::col_integer()    |
+|   sseqid       |   subject_seq_id                     |   character(0)  |   readr::col_character()  |
+|   sallseqid    |   all_subject_seq_ids                |   character(0)  |   readr::col_character()  |
+|   sgi          |   subject_gi                         |   character(0)  |   readr::col_character()  |
+|   sallgi       |   all_subject_gis                    |   character(0)  |   readr::col_character()  |
+|   sacc         |   subject_accession                  |   character(0)  |   readr::col_character()  |
+|   saccver      |   subject_accession_version          |   character(0)  |   readr::col_character()  |
+|   sallacc      |   all_subject_accessions             |   character(0)  |   readr::col_character()  |
+|   slen         |   subject_sequence_length            |   integer(0)    |   readr::col_integer()    |
+|   qstart       |   query_alignment_start              |   integer(0)    |   readr::col_integer()    |
+|   qend         |   query_alignment_end                |   integer(0)    |   readr::col_integer()    |
+|   sstart       |   subject_alignment_start            |   integer(0)    |   readr::col_integer()    |
+|   send         |   subject_alignment_end              |   integer(0)    |   readr::col_integer()    |
+|   qseq         |   query_aligned_sequence             |   character(0)  |   readr::col_character()  |
+|   sseq         |   subject_aligned_sequence           |   character(0)  |   readr::col_character()  |
+|   evalue       |   expect_value                       |   double(0)     |   readr::col_double()     |
+|   bitscore     |   bit_score                          |   double(0)     |   readr::col_double()     |
+|   score        |   raw_score                          |   double(0)     |   readr::col_double()     |
+|   length       |   alignment_length                   |   integer(0)    |   readr::col_integer()    |
+|   pident       |   percent_identical_matches          |   double(0)     |   readr::col_double()     |
+|   nident       |   number_identical_matches           |   integer(0)    |   readr::col_integer()    |
+|   mismatch     |   number_mismatches                  |   integer(0)    |   readr::col_integer()    |
+|   positive     |   number_positive_matches            |   integer(0)    |   readr::col_integer()    |
+|   gapopen      |   number_gap_openings                |   integer(0)    |   readr::col_integer()    |
+|   gaps         |   total_gaps                         |   integer(0)    |   readr::col_integer()    |
+|   ppos         |   percent_positive_matches           |   double(0)     |   readr::col_double()     |
+|   frames       |   query_subject_frames               |   character(0)  |   readr::col_character()  |
+|   qframe       |   query_frame                        |   character(0)  |   readr::col_character()  |
+|   sframe       |   subject_frame                      |   character(0)  |   readr::col_character()  |
+|   btop         |   blast_traceback_operations         |   character(0)  |   readr::col_character()  |
+|   staxid       |   subject_taxonomy_id                |   character(0)  |   readr::col_character()  |
+|   ssciname     |   subject_scientific_name            |   character(0)  |   readr::col_character()  |
+|   scomname     |   subject_common_name                |   character(0)  |   readr::col_character()  |
+|   sblastname   |   subject_blast_name                 |   character(0)  |   readr::col_character()  |
+|   sskingdom    |   subject_super_kingdom              |   character(0)  |   readr::col_character()  |
+|   staxids      |   unique_subject_taxonomy_ids        |   character(0)  |   readr::col_character()  |
+|   sscinames    |   unique_subject_scientific_names    |   character(0)  |   readr::col_character()  |
+|   scomnames    |   unique_subject_common_names        |   character(0)  |   readr::col_character()  |
+|   sblastnames  |   unique_subject_blast_names         |   character(0)  |   readr::col_character()  |
+|   sskingdoms   |   unique_subject_super_kingdoms      |   character(0)  |   readr::col_character()  |
+|   stitle       |   subject_title                      |   character(0)  |   readr::col_character()  |
+|   salltitles   |   all_subject_titles                 |   character(0)  |   readr::col_character()  |
+|   sstrand      |   subject_strand                     |   character(0)  |   readr::col_character()  |
+|   qcovs        |   query_coverage_per_subject         |   double(0)     |   readr::col_double()     |
+|   qcovhsp      |   query_coverage_per_hsp             |   double(0)     |   readr::col_double()     |
+|   qcovus       |   query_coverage_per_unique_subject  |   double(0)     |   readr::col_double()     |
+
+_Note: This data can be accessed via the `SnailBLAST:::.format_specifiers` environment. You should not rely on this in your code, as it is not part of the public interface.  But, it's there if you really need it for some reason._

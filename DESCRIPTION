@@ -29,9 +29,12 @@ Depends:
     R (>= 4.1.0)
 Suggests:
     future,
+    knitr,
     readr,
+    rmarkdown,
     rprojroot,
     testthat (>= 4.1.0),
     tibble,
     usethis
 Config/testthat/edition: 3
+VignetteBuilder: knitr
