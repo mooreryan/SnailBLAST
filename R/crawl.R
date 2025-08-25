@@ -187,6 +187,8 @@ assert_blast_dbs_exist <- checkmate::makeAssertionFunction(
 #' sys_which("blastn")
 #' sys_which("blastn", directory = "/usr/local/bin")
 #' }
+#'
+#' @export
 sys_which <- function(command, directory = NULL) {
   checkmate::assert_string(command, min.chars = 1)
   checkmate::assert_string(directory, min.chars = 1, null.ok = TRUE)

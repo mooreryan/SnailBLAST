@@ -34,4 +34,5 @@ was not found).
 sys_which("blastn")
 sys_which("blastn", directory = "/usr/local/bin")
 }
+
 }
