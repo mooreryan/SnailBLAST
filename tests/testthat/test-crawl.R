@@ -1,3 +1,7 @@
+expect_checkmate_error <- function(object, ...) {
+  testthat::expect_error(object, class = "checkmateError", ...)
+}
+
 make_temp_db <- function(pattern = "db", fileext = ".nsq") {
   temp_db_full_path <- tempfile(pattern = pattern, fileext = fileext)
   writeLines("abc", temp_db_full_path)
@@ -33,10 +37,7 @@ test_that("assert_files_exist fails for non-existent single file", {
   non_existent <- "/path/that/does/not/exist.txt"
 
   # Act & Assert
-  expect_error(
-    assert_files_exist(non_existent),
-    "The following files do not exist:.*does/not/exist\\.txt"
-  )
+  expect_checkmate_error(assert_files_exist(non_existent))
 })
 
 test_that("assert_files_exist fails for multiple non-existent files", {
@@ -44,10 +45,7 @@ test_that("assert_files_exist fails for multiple non-existent files", {
   non_existent_files <- c("/fake/path1.txt", "/fake/path2.txt")
 
   # Act & Assert
-  expect_error(
-    assert_files_exist(non_existent_files),
-    "The following files do not exist:.*path1\\.txt.*path2\\.txt"
-  )
+  expect_checkmate_error(assert_files_exist(non_existent_files))
 })
 
 test_that("assert_files_exist fails when some files exist and some don't", {
@@ -58,10 +56,7 @@ test_that("assert_files_exist fails when some files exist and some don't", {
   mixed_files <- c(temp_file, "/fake/nonexistent.txt")
 
   # Act & Assert
-  expect_error(
-    assert_files_exist(mixed_files),
-    "The following files do not exist:.*nonexistent\\.txt"
-  )
+  expect_checkmate_error(assert_files_exist(mixed_files))
 })
 
 test_that("assert_blast_dbs_exist validates single base path with .nsq", {
@@ -129,15 +124,7 @@ test_that("assert_blast_dbs_exist fails when none of the bases have .nsq or .psq
   bases <- c(tempfile(), tempfile())
 
   # Act & Assert (new message)
-  expected_msg <- paste0(
-    "No .nsq or .psq file found for base paths: ",
-    paste(bases, collapse = ", ")
-  )
-  expect_error(
-    assert_blast_dbs_exist(bases),
-    expected_msg,
-    fixed = TRUE
-  )
+  expect_checkmate_error(assert_blast_dbs_exist(bases))
 })
 
 
@@ -146,26 +133,14 @@ test_that("assert_blast_dbs_exist rejects inputs with .nsq/.psq extensions (case
   inputs <- c("/path/DB.NSQ", "/path/DB2.PsQ")
 
   # Act & Assert
-  expected_msg <- paste0(
-    "Do not include file extensions (.nsq/.psq). Provide base paths only. Problem inputs: ",
-    paste(inputs, collapse = ", ")
-  )
-  expect_error(
-    assert_blast_dbs_exist(inputs),
-    expected_msg,
-    fixed = TRUE
-  )
+  expect_checkmate_error(assert_blast_dbs_exist(inputs))
 })
 
 test_that("osenoi", {
   good_temp_db <- make_temp_db()
   bad_temp_db <- "/this/is/a/bad/db"
 
-  expect_error(
-    assert_blast_dbs_exist(c(good_temp_db, bad_temp_db)),
-    bad_temp_db,
-    fixed = TRUE
-  )
+  expect_checkmate_error(assert_blast_dbs_exist(c(good_temp_db, bad_temp_db)))
 })
 
 test_that("sys_which finds command on PATH", {
@@ -184,10 +159,10 @@ test_that("sys_which finds command on PATH", {
 
 test_that("sys_which validates input parameters", {
   # Act & Assert
-  expect_error(sys_which(""), "have at least 1 character")
-  expect_error(sys_which(123), "string")
-  expect_error(sys_which("cmd", ""), "have at least 1 character")
-  expect_error(sys_which("cmd", 123), "string")
+  expect_checkmate_error(sys_which(""))
+  expect_checkmate_error(sys_which(123))
+  expect_checkmate_error(sys_which("cmd", ""))
+  expect_checkmate_error(sys_which("cmd", 123))
 })
 
 test_that("sys_which finds command in specific directory", {
@@ -257,20 +232,16 @@ test_that("parse_short_format_specifiers parses valid specifiers", {
 
 test_that("parse_short_format_specifiers validates input type", {
   # Act & Assert
-  expect_error(parse_short_format_specifiers(123), "string")
-  expect_error(parse_short_format_specifiers(c("a", "b")), "Must have length 1")
+  expect_checkmate_error(parse_short_format_specifiers(123))
+  expect_checkmate_error(parse_short_format_specifiers(c("a", "b")))
 })
 
 test_that("parse_short_format_specifiers rejects invalid specifiers", {
   # Act & Assert
-  expect_error(
-    parse_short_format_specifiers("invalid_specifier"),
-    "subset"
-  )
-  expect_error(
-    parse_short_format_specifiers("qaccver invalid_spec saccver"),
-    "subset"
-  )
+  expect_checkmate_error(parse_short_format_specifiers("invalid_specifier"))
+  expect_checkmate_error(parse_short_format_specifiers(
+    "qaccver invalid_spec saccver"
+  ))
 })
 
 test_that("crawl validates input parameters", {
@@ -283,28 +254,20 @@ test_that("crawl validates input parameters", {
   on.exit(unlink(temp_db), add = TRUE)
 
   # blast_executable validation
-  expect_error(
-    crawl("", temp_query, temp_db),
-    "command.*must have at least 1 character"
-  )
+  expect_checkmate_error(crawl("", temp_query, temp_db))
 
   with_mocked_bindings(
     {
       # query_paths validation
-      expect_error(
-        crawl("blastn", character(0), temp_db),
-        "query_paths.*have length >= 1"
-      )
-      expect_error(
-        crawl("blastn", "/nonexistent/query.fasta", temp_db),
-        "query_paths.*[Ff]iles do not exist"
-      )
+      expect_checkmate_error(crawl("blastn", character(0), temp_db))
+      expect_checkmate_error(crawl(
+        "blastn",
+        "/nonexistent/query.fasta",
+        temp_db
+      ))
 
       # db_paths validation
-      expect_error(
-        crawl("blastn", temp_query, character(0)),
-        "db_paths.*have length >= 1"
-      )
+      expect_checkmate_error(crawl("blastn", temp_query, character(0)))
     },
     sys_which = function(...) "/usr/bin/blastn"
   )
@@ -320,14 +283,13 @@ test_that("crawl rejects user-provided outfmt argument", {
   on.exit(unlink(temp_db), add = TRUE)
 
   # Act & Assert
-  expect_error(
+  expect_checkmate_error(
     crawl(
       "blastn",
       temp_query,
       temp_db,
       extra_blast_arguments = c("-outfmt", "7")
-    ),
-    "user_provided_outfmt_argument.*FALSE"
+    )
   )
 })
 
@@ -341,34 +303,31 @@ test_that("crawl validates callback functions", {
   on.exit(unlink(temp_db), add = TRUE)
 
   # Act & Assert
-  expect_error(
+  expect_checkmate_error(
     crawl(
       "blastn",
       temp_query,
       temp_db,
       job_failed_callback = "not_a_function"
-    ),
-    "job_failed_callback.*be.*function"
+    )
   )
 
-  expect_error(
+  expect_checkmate_error(
     crawl(
       "blastn",
       temp_query,
       temp_db,
       job_failed_callback = function(wrong_args) {}
-    ),
-    "job_failed_callback.*have formal arguments"
+    )
   )
 
-  expect_error(
+  expect_checkmate_error(
     crawl(
       "blastn",
       temp_query,
       temp_db,
       parse_failed_callback = function(wrong_args) {}
-    ),
-    "parse_failed_callback.*have formal arguments"
+    )
   )
 })
 

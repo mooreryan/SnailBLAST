@@ -19,11 +19,13 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
-    checkmate,
+    checkmate (>= 2.3.3-1),
     dplyr,
     future.apply,
     processx,
     rlang
+Remotes:
+    mooreryan/checkmate@2.3.3-1
 RoxygenNote: 7.3.2
 Depends:
     R (>= 4.1.0)
