@@ -348,7 +348,14 @@ test_that("crawl handles job failures", {
         "blastn",
         temp_query,
         temp_db,
-        job_failed_callback = function(query_path, db_path, exit_status) {
+        job_failed_callback = function(
+          query_path,
+          db_path,
+          exit_status,
+          command,
+          args,
+          stderr
+        ) {
           failed_jobs <<- append(
             failed_jobs,
             # This list in list keeps it so we can check individual steps more
@@ -356,7 +363,10 @@ test_that("crawl handles job failures", {
             list(list(
               query = query_path,
               db = db_path,
-              status = exit_status
+              status = exit_status,
+              command = command,
+              args = args,
+              stderr = stderr
             ))
           )
         }
@@ -366,12 +376,18 @@ test_that("crawl handles job failures", {
       expect_equal(failed_jobs[[1]]$query, temp_query)
       expect_equal(failed_jobs[[1]]$db, temp_db)
       expect_equal(failed_jobs[[1]]$status, 1)
+      expect_equal(failed_jobs[[1]]$command, "/usr/bin/blastn")
+      expect_true(any(grepl(temp_query, failed_jobs[[1]]$args)))
+      expect_true(any(grepl(temp_db, failed_jobs[[1]]$args)))
+      expect_equal(failed_jobs[[1]]$stderr, "error message")
 
       expect_true(is.data.frame(result))
       expect_equal(nrow(result), 0)
     },
     sys_which = function(...) "/usr/bin/blastn",
-    run_process = function(...) list(status = 1, stdout = "")
+    run_process = function(...) {
+      list(status = 1, stdout = "", stderr = "error message")
+    }
   )
 })
 
@@ -392,13 +408,23 @@ test_that("crawl handles parse failures gracefully", {
         "blastn",
         temp_query,
         temp_db,
-        parse_failed_callback = function(query_path, db_path, error_condition) {
+        parse_failed_callback = function(
+          query_path,
+          db_path,
+          error_condition,
+          command,
+          args,
+          stderr
+        ) {
           parse_failures <<- append(
             parse_failures,
             list(list(
               query = query_path,
               db = db_path,
-              error = error_condition
+              error = error_condition,
+              command = command,
+              args = args,
+              stderr = stderr
             ))
           )
         }
@@ -407,13 +433,20 @@ test_that("crawl handles parse failures gracefully", {
       expect_length(parse_failures, 1)
       expect_equal(parse_failures[[1]]$query, temp_query)
       expect_equal(parse_failures[[1]]$db, temp_db)
+      expect_true(any(grepl(temp_query, parse_failures[[1]]$args)))
+      expect_true(any(grepl(temp_db, parse_failures[[1]]$args)))
+      expect_equal(parse_failures[[1]]$stderr, "some error message")
 
       expect_true(is.data.frame(result))
       expect_equal(nrow(result), 0)
     },
     sys_which = function(...) "/usr/bin/blastn",
     run_process = function(...) {
-      list(status = 0, stdout = "invalid\ttab\tseparated\tdata")
+      list(
+        status = 0,
+        stdout = "invalid\ttab\tseparated\tdata",
+        stderr = "some error message"
+      )
     },
     read_blast_tsv = function(...) stop("Parse error")
   )
@@ -440,7 +473,10 @@ test_that("crawl processes successful BLAST results", {
         parse_failed_callback = function(
           query_path,
           db_path,
-          error_condition
+          error_condition,
+          command,
+          args,
+          stderr
         ) {
           warning(sprintf(
             "Parsing failed for query '%s' against database '%s': %s",
@@ -449,7 +485,14 @@ test_that("crawl processes successful BLAST results", {
             error_condition$message
           ))
         },
-        job_failed_callback = function(query_path, db_path, exit_status) {
+        job_failed_callback = function(
+          query_path,
+          db_path,
+          exit_status,
+          command,
+          args,
+          stderr
+        ) {
           warning("the job failed")
         }
       )

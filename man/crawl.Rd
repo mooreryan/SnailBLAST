@@ -13,9 +13,11 @@ crawl(
     "qaccver saccver pident length mismatch gapopen qstart qend sstart send evalue bitscore",
   extra_blast_arguments = NULL,
   use_long_names_in_parsed_result = FALSE,
-  job_failed_callback = function(query_path, db_path, exit_status) {
+  job_failed_callback = function(query_path, db_path, exit_status, command, args, stderr)
+    {
  },
-  parse_failed_callback = function(query_path, db_path, error_condition) {
+  parse_failed_callback = function(query_path, db_path, error_condition, command, args,
+    stderr) {
  }
 )
 }
@@ -56,12 +58,12 @@ specifier names are used as column names.}
 \item{job_failed_callback}{\code{[function]}\cr
 Function called when a BLAST process exits with a non-zero status (or a
 NA status). Called as \code{job_failed_callback(query_path, db_path,
-exit_status)}. The default is a no-op function.}
+exit_status, command, args, stderr)}. The default is a no-op function.}
 
 \item{parse_failed_callback}{\code{[function]}\cr
 Function called when parsing the BLAST stdout fails. Called as
-\code{parse_failed_callback(query_path, db_path, error_condition)}. The
-default is a no-op function.}
+\code{parse_failed_callback(query_path, db_path, error_condition, command,
+args, stderr)}. The default is a no-op function.}
 }
 \value{
 A tibble combining the parsed BLAST hits from all successful
@@ -97,10 +99,10 @@ crawl(
   blast_executable = "blastn",
   query_paths = "queries/a.fasta",
   db_paths = "dbs/nt",
-  job_failed_callback = function(query_path, db_path, exit_status) {
+  job_failed_callback = function(query_path, db_path, exit_status, command, args, stderr) {
     message("BLAST job failed for ", query_path, " vs ", db_path, ": ", exit_status)
   },
-  parse_failed_callback = function(query_path, db_path, error_condition) {
+  parse_failed_callback = function(query_path, db_path, error_condition, command, args, stderr) {
     message(
       "Failed to parse BLAST output for ",
       query_path,

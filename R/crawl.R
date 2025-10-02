@@ -342,11 +342,11 @@ read_blast_tsv <- function(file, col_names, col_types) {
 #' @param job_failed_callback \code{[function]}\cr
 #'   Function called when a BLAST process exits with a non-zero status (or a
 #'   NA status). Called as \code{job_failed_callback(query_path, db_path,
-#'   exit_status)}. The default is a no-op function.
+#'   exit_status, command, args, stderr)}. The default is a no-op function.
 #' @param parse_failed_callback \code{[function]}\cr
 #'   Function called when parsing the BLAST stdout fails. Called as
-#'   \code{parse_failed_callback(query_path, db_path, error_condition)}. The
-#'   default is a no-op function.
+#'   \code{parse_failed_callback(query_path, db_path, error_condition, command,
+#'   args, stderr)}. The default is a no-op function.
 #'
 #' @return A tibble combining the parsed BLAST hits from all successful
 #'   query/DB runs. Column names correspond to the selected format specifiers
@@ -369,10 +369,10 @@ read_blast_tsv <- function(file, col_names, col_types) {
 #'   blast_executable = "blastn",
 #'   query_paths = "queries/a.fasta",
 #'   db_paths = "dbs/nt",
-#'   job_failed_callback = function(query_path, db_path, exit_status) {
+#'   job_failed_callback = function(query_path, db_path, exit_status, command, args, stderr) {
 #'     message("BLAST job failed for ", query_path, " vs ", db_path, ": ", exit_status)
 #'   },
-#'   parse_failed_callback = function(query_path, db_path, error_condition) {
+#'   parse_failed_callback = function(query_path, db_path, error_condition, command, args, stderr) {
 #'     message(
 #'       "Failed to parse BLAST output for ",
 #'       query_path,
@@ -395,8 +395,22 @@ crawl <- function(
   outfmt_specifiers = "qaccver saccver pident length mismatch gapopen qstart qend sstart send evalue bitscore",
   extra_blast_arguments = NULL,
   use_long_names_in_parsed_result = FALSE,
-  job_failed_callback = function(query_path, db_path, exit_status) {},
-  parse_failed_callback = function(query_path, db_path, error_condition) {}
+  job_failed_callback = function(
+    query_path,
+    db_path,
+    exit_status,
+    command,
+    args,
+    stderr
+  ) {},
+  parse_failed_callback = function(
+    query_path,
+    db_path,
+    error_condition,
+    command,
+    args,
+    stderr
+  ) {}
 ) {
   blast_executable <- sys_which(
     command = blast_executable,
@@ -422,11 +436,25 @@ crawl <- function(
   # Check callbacks
   checkmate::assert_function(
     job_failed_callback,
-    args = c("query_path", "db_path", "exit_status")
+    args = c(
+      "query_path",
+      "db_path",
+      "exit_status",
+      "command",
+      "args",
+      "stderr"
+    )
   )
   checkmate::assert_function(
     parse_failed_callback,
-    args = c("query_path", "db_path", "error_condition")
+    args = c(
+      "query_path",
+      "db_path",
+      "error_condition",
+      "command",
+      "args",
+      "stderr"
+    )
   )
 
   short_format_specifiers <- parse_short_format_specifiers(outfmt_specifiers)
@@ -485,31 +513,40 @@ crawl <- function(
       read_blast_tsv = read_blast_tsv
     ),
     FUN = function(query_path, db_path, run_process, read_blast_tsv) {
+      blast_args <- append(
+        c(
+          "-db",
+          db_path,
+          "-query",
+          query_path,
+          "-outfmt",
+          paste(
+            c("6", short_format_specifiers),
+            collapse = " "
+          )
+        ),
+        extra_blast_arguments
+      )
+
       process_result <- run_process(
         command = blast_executable,
         # NOTE: append handles `extra_blast_arguments` being NULL
-        args = append(
-          c(
-            "-db",
-            db_path,
-            "-query",
-            query_path,
-            "-outfmt",
-            paste(
-              c("6", short_format_specifiers),
-              collapse = " "
-            )
-          ),
-          extra_blast_arguments
-        ),
+        args = blast_args,
         error_on_status = FALSE
       )
+
+      # TODO: what to do with the stderr if it is present? This is ignoring all stderr, which has caused bugs in rCRUX.
+
+      # Need a callback for that too...takes the query-target-stderr
 
       if (rlang::is_na(process_result$status) || process_result$status != 0) {
         job_failed_callback(
           query_path = query_path,
           db_path = db_path,
-          exit_status = process_result$status
+          exit_status = process_result$status,
+          command = blast_executable,
+          args = blast_args,
+          stderr = process_result$stderr
         )
         empty_blast_result_callback()
       } else {
@@ -536,7 +573,10 @@ crawl <- function(
             parse_failed_callback(
               query_path = query_path,
               db_path = db_path,
-              error_condition = error_condition
+              error_condition = error_condition,
+              command = blast_executable,
+              args = blast_args,
+              stderr = process_result$stderr
             )
             empty_blast_result_callback()
           }
