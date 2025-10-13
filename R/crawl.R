@@ -22,6 +22,8 @@
 #' \dontrun{
 #' check_files_exist(c("/path/to/existing", "/path/to/missing"))
 #' }
+#'
+#' @export
 check_files_exist <- function(filenames) {
   checks <- sapply(filenames, function(file) {
     checkmate::test_file_exists(file)
@@ -62,6 +64,8 @@ check_files_exist <- function(filenames) {
 #' \dontrun{
 #' assert_files_exist(c("/path/to/file1", "/path/to/file2"))
 #' }
+#'
+#' @export
 assert_files_exist <- checkmate::makeAssertionFunction(
   check.fun = check_files_exist
 )
@@ -97,6 +101,8 @@ assert_files_exist <- checkmate::makeAssertionFunction(
 #' \dontrun{
 #' check_blast_dbs_exist(c("/data/db/nt", "/data/db/prot"))
 #' }
+#'
+#' @export
 check_blast_dbs_exist <- function(filenames) {
   # Basic input sanity (non-asserting to comply with checkmate check contract)
   if (!checkmate::test_character(filenames, any.missing = FALSE, min.len = 1)) {
@@ -158,6 +164,8 @@ check_blast_dbs_exist <- function(filenames) {
 #' \dontrun{
 #' assert_blast_dbs_exist(c("/data/db/nt", "/data/db/prot"))
 #' }
+#'
+#' @export
 assert_blast_dbs_exist <- checkmate::makeAssertionFunction(
   check.fun = check_blast_dbs_exist
 )

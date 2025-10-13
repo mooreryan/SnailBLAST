@@ -39,4 +39,5 @@ and a single character string describing the problem on failure.
 \dontrun{
 check_blast_dbs_exist(c("/data/db/nt", "/data/db/prot"))
 }
+
 }

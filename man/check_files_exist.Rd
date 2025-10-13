@@ -32,4 +32,5 @@ Note: this function does not throw an R error; it returns a failure message
 \dontrun{
 check_files_exist(c("/path/to/existing", "/path/to/missing"))
 }
+
 }

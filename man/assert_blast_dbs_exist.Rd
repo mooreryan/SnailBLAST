@@ -36,4 +36,5 @@ On success it returns its argument invisibly.
 \dontrun{
 assert_blast_dbs_exist(c("/data/db/nt", "/data/db/prot"))
 }
+
 }

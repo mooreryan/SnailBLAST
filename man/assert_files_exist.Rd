@@ -34,4 +34,5 @@ argument invisibly.
 \dontrun{
 assert_files_exist(c("/path/to/file1", "/path/to/file2"))
 }
+
 }
