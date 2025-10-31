@@ -70,106 +70,6 @@ assert_files_exist <- checkmate::makeAssertionFunction(
   check.fun = check_files_exist
 )
 
-#' Check that BLAST DB indicator files exist for each base path
-#'
-#' Given base paths (without extensions), this check verifies that, for every
-#' base path, at least one of the following exists:
-#' - \code{<base>.nsq} (nucleotide DB indicator), or
-#' - \code{<base>.psq} (protein DB indicator).
-#'
-#' A mixture across inputs is allowed (some bases may have \code{.nsq}, others
-#' \code{.psq}, some both). The check fails only for base paths that are
-#' missing both.
-#'
-#' This function performs lightweight validation only and does not attempt to
-#' validate other BLAST DB companion files (e.g., \code{.nin}/\code{.nhr} or
-#' \code{.pin}/\code{.phr}).
-#'
-#' This is a checkmate-style check function: it returns \code{TRUE} on success
-#' and a single character string describing the problem on failure.
-#'
-#' @param filenames [character] One or more base paths (without extension) of
-#'   the BLAST databases to check. For each base path, the function will look
-#'   for either \code{<base>.nsq} or \code{<base>.psq}.
-#'
-#' @return \itemize{
-#'   \item{\code{TRUE} if every base path points to a plausible BLAST DB}
-#'   \item{A string describing the failure}
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' check_blast_dbs_exist(c("/data/db/nt", "/data/db/prot"))
-#' }
-#'
-#' @export
-check_blast_dbs_exist <- function(filenames) {
-  # Basic input sanity (non-asserting to comply with checkmate check contract)
-  if (!checkmate::test_character(filenames, any.missing = FALSE, min.len = 1)) {
-    return(
-      "filenames must be a non-empty character vector with no missing values"
-    )
-  }
-
-  # Disallow passing files with .nsq or .psq extensions. That's definitely a
-  # user error (case-insensitive)
-  has_forbidden_ext <- grepl("\\.(nsq|psq)$", filenames, ignore.case = TRUE)
-  if (any(has_forbidden_ext)) {
-    offenders <- unique(filenames[has_forbidden_ext])
-    return(
-      paste0(
-        "Do not include file extensions (.nsq/.psq). Provide base paths only. Problem inputs: ",
-        paste(offenders, collapse = ", ")
-      )
-    )
-  }
-
-  nsq_paths <- paste0(filenames, ".nsq")
-  psq_paths <- paste0(filenames, ".psq")
-
-  nsq_exists <- vapply(nsq_paths, checkmate::test_file_exists, logical(1))
-  psq_exists <- vapply(psq_paths, checkmate::test_file_exists, logical(1))
-
-  # Pass if each base path has at least one of .nsq or .psq
-  exists_any <- nsq_exists | psq_exists
-  if (all(exists_any)) {
-    return(TRUE)
-  }
-
-  # Return an informative error message showing the base paths missing both
-  missing_bases <- filenames[!exists_any]
-  paste0(
-    "No .nsq or .psq file found for base paths: ",
-    paste(missing_bases, collapse = ", ")
-  )
-}
-
-#' Assertion that BLAST DB indicator files exist
-#'
-#' Assertion wrapper generated via \code{checkmate::makeAssertionFunction()} from
-#' \code{check_blast_dbs_exist}. This assertion will throw an error if any of
-#' the supplied base paths are missing both \code{.nsq} and \code{.psq}.
-#' On success it returns its argument invisibly.
-#'
-#' @param filenames [character] One or more base paths (without extension) of
-#'   the BLAST databases to check.
-#' @template add
-#' @template var.name
-#'
-#' @return Invisibly returns its \code{filenames} argument if all base paths
-#'   have at least one of \code{.nsq} or \code{.psq}; otherwise throws an error
-#'   with an informative message.
-#'
-#' @examples
-#' \dontrun{
-#' assert_blast_dbs_exist(c("/data/db/nt", "/data/db/prot"))
-#' }
-#'
-#' @export
-assert_blast_dbs_exist <- checkmate::makeAssertionFunction(
-  check.fun = check_blast_dbs_exist
-)
-
 #' Find a command in PATH or a specific directory
 #'
 #' Like \code{Sys.which} but accepts a scalar \code{command} and an optional
@@ -430,7 +330,6 @@ crawl <- function(
   assert_files_exist(query_paths)
 
   checkmate::assert_character(db_paths, min.len = 1)
-  assert_blast_dbs_exist(db_paths)
 
   checkmate::assert_character(extra_blast_arguments, null.ok = TRUE)
   # Make sure user didn't supply the outfmt arg
