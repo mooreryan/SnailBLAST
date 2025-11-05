@@ -9,3 +9,9 @@ check: dev_deps
 
 install: check
     Rscript --vanilla -e 'devtools::install(build_vignettes = TRUE)'
+
+review_snaps:
+    Rscript --vanilla -e 'testthat::snapshot_review()'
+
+accept_snaps:
+    Rscript --vanilla -e 'testthat::snapshot_accept()'

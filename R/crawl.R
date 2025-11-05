@@ -204,7 +204,12 @@ run_process <- function(command, args, error_on_status = FALSE) {
 #' read_blast_tsv("blast_output.tsv", col_names = TRUE)
 #' }
 read_blast_tsv <- function(file, col_names, col_types) {
-  readr::read_tsv(file = file, col_names = col_names, col_types = col_types)
+  readr::read_tsv(
+    file = file,
+    col_names = col_names,
+    col_types = col_types,
+    show_col_types = FALSE
+  )
 }
 
 # TODO: somewhere need to document the col types and the long specifiers
@@ -420,12 +425,17 @@ crawl <- function(
       read_blast_tsv = read_blast_tsv
     ),
     FUN = function(query_path, db_path, run_process, read_blast_tsv) {
+      tmp_out <- tempfile(pattern = "blast_", fileext = ".tsv")
+      on.exit(unlink(tmp_out), add = TRUE)
+
       blast_args <- append(
         c(
           "-db",
           db_path,
           "-query",
           query_path,
+          "-out",
+          tmp_out,
           "-outfmt",
           paste(
             c("6", short_format_specifiers),
@@ -461,10 +471,8 @@ crawl <- function(
         rlang::try_fetch(
           expr = {
             blast_hit_data <-
-              # Wrapping with I() ensures that the string is treated as literal
-              # data and not a file name
-              I(process_result$stdout) |>
               read_blast_tsv(
+                tmp_out,
                 col_names = names(blast_result_column_types),
                 col_types = blast_result_column_types
               )
