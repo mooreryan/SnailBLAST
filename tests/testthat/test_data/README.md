@@ -18,6 +18,7 @@ makeblastdb -in real_db_2.fasta -out real_db_2 -dbtype nucl
 
 - `real_queries_1`: contains 4 "sequences" from the beginning and end of the RNR sequence (this will have hits to both DBs)
 - `real_queries_2`: contains 2 "sequences" from the beginning (this should only have hits to the first DB)
+- `real_queries_3`: contains the _exact same sequences_ with alterned names as `real_queries_2`. It is here to ensure there aren't any bugs when one of the number of query files or number of target DBs isn't a factor of the other.
 
 ### Expected Hits
 

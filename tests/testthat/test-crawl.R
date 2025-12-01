@@ -672,7 +672,8 @@ test_that("crawl integration test with real BLAST data", {
   # Arrange - use real test data files
   query_files <- c(
     test_path("test_data", "real_queries_1.fasta"),
-    test_path("test_data", "real_queries_2.fasta")
+    test_path("test_data", "real_queries_2.fasta"),
+    test_path("test_data", "real_queries_3.fasta")
   )
 
   db_files <- c(
@@ -757,7 +758,8 @@ test_that("crawl integration test with real BLAST data (multisession plan)", {
     # Arrange - use real test data files
     query_files <- c(
       test_path("test_data", "real_queries_1.fasta"),
-      test_path("test_data", "real_queries_2.fasta")
+      test_path("test_data", "real_queries_2.fasta"),
+      test_path("test_data", "real_queries_3.fasta")
     )
 
     db_files <- c(
@@ -848,7 +850,8 @@ test_that("crawl integration test with real BLAST data (multicore plan)", {
     # Arrange - use real test data files
     query_files <- c(
       test_path("test_data", "real_queries_1.fasta"),
-      test_path("test_data", "real_queries_2.fasta")
+      test_path("test_data", "real_queries_2.fasta"),
+      test_path("test_data", "real_queries_3.fasta")
     )
 
     db_files <- c(
@@ -932,7 +935,8 @@ test_that("crawl integration test with real BLAST data (custom format spec)", {
   # Arrange - use real test data files
   query_files <- c(
     test_path("test_data", "real_queries_1.fasta"),
-    test_path("test_data", "real_queries_2.fasta")
+    test_path("test_data", "real_queries_2.fasta"),
+    test_path("test_data", "real_queries_3.fasta")
   )
 
   db_files <- c(
@@ -987,7 +991,8 @@ test_that("crawl integration test with real BLAST data (long col names)", {
   # Arrange - use real test data files
   query_files <- c(
     test_path("test_data", "real_queries_1.fasta"),
-    test_path("test_data", "real_queries_2.fasta")
+    test_path("test_data", "real_queries_2.fasta"),
+    test_path("test_data", "real_queries_3.fasta")
   )
 
   db_files <- c(

@@ -3,6 +3,7 @@
 .Rhistory
 .Rproj.user
 .Ruserdata
+/.vscode
 /.zed
 /_*
 /data-raw/*numbers

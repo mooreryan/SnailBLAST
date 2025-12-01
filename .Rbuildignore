@@ -3,6 +3,7 @@
 .Rhistory
 ^.*\.Rproj$
 ^.lintr$
+^.vscode$
 ^.zed$
 ^LICENSE\.md$
 ^\.Rproj\.user$
