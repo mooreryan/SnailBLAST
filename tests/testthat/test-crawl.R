@@ -1059,3 +1059,89 @@ test_that("crawl integration test with real BLAST data (long col names)", {
     )
   )
 })
+
+test_that("crawl integration test with real BLAST data, and output directory", {
+  # Skip if BLAST is not available
+  skip_if(sys_which("blastn") == "", "blastn not found on PATH")
+
+  # Arrange - use real test data files
+  query_files <- c(
+    test_path("test_data", "real_queries_1.fasta"),
+    test_path("test_data", "real_queries_2.fasta"),
+    test_path("test_data", "real_queries_3.fasta")
+  )
+
+  db_files <- c(
+    test_path("test_data", "real_db_1"),
+    test_path("test_data", "real_db_2")
+  )
+
+  # Act - run the actual BLAST search
+  result <- crawl(
+    blast_executable = "blastn",
+    query_paths = query_files,
+    db_paths = db_files,
+    extra_blast_arguments = c("-evalue", "1e-5")
+  )
+
+  # Assert - check the structure and content
+
+  expeceted_types <- list(
+    qaccver = "character",
+    saccver = "character",
+    pident = "double",
+    length = "integer",
+    mismatch = "integer",
+    gapopen = "integer",
+    qstart = "integer",
+    qend = "integer",
+    sstart = "integer",
+    send = "integer",
+    evalue = "double",
+    bitscore = "integer"
+  )
+
+  checkmate::expect_data_frame(
+    result,
+    types = unlist(expeceted_types),
+    any.missing = FALSE,
+    min.rows = 1
+  )
+
+  checkmate::expect_names(
+    colnames(result),
+    permutation.of = names(expeceted_types)
+  )
+
+  # Should respect our evalue filter
+  checkmate::expect_double(result$evalue, upper = 1e-5)
+
+  # Read the expected results
+  expected_result <- readr::read_tsv(
+    test_path("test_data", "expected_real_hits.tsv"),
+    col_names = c(
+      "qaccver",
+      "saccver",
+      "pident",
+      "length",
+      "mismatch",
+      "gapopen",
+      "qstart",
+      "qend",
+      "sstart",
+      "send",
+      "evalue",
+      "bitscore"
+    ),
+    show_col_types = FALSE
+  )
+
+  expect_equal(
+    dplyr::arrange(result, .data$qaccver, .data$saccver),
+    expected = dplyr::arrange(expected_result, .data$qaccver, .data$saccver)
+  )
+})
+
+## Slurping and output directories
+#
+#

@@ -1,6 +1,9 @@
 test:
     Rscript --vanilla -e 'devtools::test()'
 
+test_file basename:
+    Rscript --vanilla -e 'devtools::test_active_file("tests/testthat/test-{{ basename }}.R")'
+
 dev_deps:
     Rscript --vanilla -e 'devtools::install_dev_deps()'
 

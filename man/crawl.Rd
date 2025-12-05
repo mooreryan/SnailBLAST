@@ -8,6 +8,8 @@ crawl(
   blast_executable,
   query_paths,
   db_paths,
+  output_directory = NULL,
+  slurp = TRUE,
   blast_executable_directory = NULL,
   outfmt_specifiers =
     "qaccver saccver pident length mismatch gapopen qstart qend sstart send evalue bitscore",
@@ -32,6 +34,12 @@ One or more paths to query files.}
 
 \item{db_paths}{\code{[character]}\cr
 One or more BLAST DB base paths.}
+
+\item{output_directory}{\code{[character(1)]}\cr
+Path to output directory. If this is non-null, then the individual BLAST output files are written there, and they are not deleted after the snail finishes crawling. TODO}
+
+\item{slurp}{\code{[logical(1)]}\cr
+Should the snail slurp up the the BLAST output while crawling? If not, the caller will need to manually read the individual BLAST output files. If slurp is \code{FALSE} and \code{output_directory} is \code{NULL}, then the \code{crawl} will fail. TODO}
 
 \item{blast_executable_directory}{\code{[character(1) | NULL]}\cr
 Optional directory in which to look for \code{blast_executable}. If

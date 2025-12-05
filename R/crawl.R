@@ -1,3 +1,9 @@
+# TODO: mention that parse failed callback has no effect if slurp is true
+
+abort_snailblast_error <- function(message, ...) {
+  rlang::abort(message = message, class = "snailblast_error", ...)
+}
+
 #' Check that one or more files exist
 #'
 #' Non-asserting check function that verifies each element of
@@ -234,6 +240,10 @@ read_blast_tsv <- function(file, col_names, col_types) {
 #'   One or more paths to query files.
 #' @param db_paths \code{[character]}\cr
 #'   One or more BLAST DB base paths.
+#' @param output_directory \code{[character(1)]}\cr
+#'   Path to output directory. If this is non-null, then the individual BLAST output files are written there, and they are not deleted after the snail finishes crawling. TODO
+#' @param slurp \code{[logical(1)]}\cr
+#'   Should the snail slurp up the the BLAST output while crawling? If not, the caller will need to manually read the individual BLAST output files. If slurp is \code{FALSE} and \code{output_directory} is \code{NULL}, then the \code{crawl} will fail. TODO
 #' @param blast_executable_directory \code{[character(1) | NULL]}\cr
 #'   Optional directory in which to look for \code{blast_executable}. If
 #'   non-\code{NULL} the executable is resolved via \code{file.path(directory,
@@ -303,6 +313,8 @@ crawl <- function(
   blast_executable,
   query_paths,
   db_paths,
+  output_directory = NULL,
+  slurp = TRUE,
   blast_executable_directory = NULL,
   # default args for -outfmt 6
   outfmt_specifiers = "qaccver saccver pident length mismatch gapopen qstart qend sstart send evalue bitscore",
@@ -335,6 +347,12 @@ crawl <- function(
   assert_files_exist(query_paths)
 
   checkmate::assert_character(db_paths, min.len = 1)
+
+  if (isFALSE(slurp) && is.null(output_directory)) {
+    abort_snailblast_error(
+      "output_directory must be specified when slurp is FALSE"
+    )
+  }
 
   checkmate::assert_character(extra_blast_arguments, null.ok = TRUE)
   # Make sure user didn't supply the outfmt arg
@@ -409,6 +427,38 @@ crawl <- function(
     must.include = c("query_path", "db_path")
   )
 
+  if (!is.null(output_directory) && !dir.exists(output_directory)) {
+    dir.create(
+      output_directory,
+      showWarnings = FALSE,
+      recursive = TRUE,
+      mode = "0750"
+    )
+  }
+
+  if (is.null(output_directory)) {
+    # If the output directory isn't given, we want to write to a tempdir and
+    # delete the files when we're done.
+    make_tempfile <- function() {
+      tempfile(pattern = "blast_", fileext = ".tsv", tmpdir = tempdir())
+    }
+
+    maybe_unlink <- function(file) {
+      unlink(file)
+    }
+  } else {
+    # If the outdirectory IS given, then we want to write our files there, and
+    # also we DON'T want to delete them at the end.
+    make_tempfile <- function() {
+      tempfile(pattern = "blast_", fileext = ".tsv", tmpdir = output_directory)
+    }
+
+    maybe_unlink <- function(file) {
+      # This is the `unlink` function successful return value
+      invisible(0)
+    }
+  }
+
   blast_hits_list <- future.apply::future_mapply(
     query_db_pairs$query_path,
     query_db_pairs$db_path,
@@ -422,11 +472,20 @@ crawl <- function(
     # properly.
     MoreArgs = list(
       run_process = run_process,
-      read_blast_tsv = read_blast_tsv
+      read_blast_tsv = read_blast_tsv,
+      make_tempfile = make_tempfile,
+      maybe_unlink = maybe_unlink
     ),
-    FUN = function(query_path, db_path, run_process, read_blast_tsv) {
-      tmp_out <- tempfile(pattern = "blast_", fileext = ".tsv")
-      on.exit(unlink(tmp_out), add = TRUE)
+    FUN = function(
+      query_path,
+      db_path,
+      run_process,
+      read_blast_tsv,
+      make_tempfile,
+      maybe_unlink
+    ) {
+      tmp_out <- make_tempfile()
+      on.exit(maybe_unlink(tmp_out), add = TRUE)
 
       blast_args <- append(
         c(
@@ -452,8 +511,9 @@ crawl <- function(
         error_on_status = FALSE
       )
 
-      # TODO: what to do with the stderr if it is present? This is ignoring all stderr, which has caused bugs in rCRUX.
-
+      # TODO: what to do with the stderr if it is present? This is ignoring all
+      # stderr, which has caused bugs in rCRUX.
+      #
       # Need a callback for that too...takes the query-target-stderr
 
       if (rlang::is_na(process_result$status) || process_result$status != 0) {
@@ -467,45 +527,54 @@ crawl <- function(
         )
         empty_blast_result_callback()
       } else {
-        # Try to read the BLAST data
-        rlang::try_fetch(
-          expr = {
-            blast_hit_data <-
-              read_blast_tsv(
-                tmp_out,
-                col_names = names(blast_result_column_types),
-                col_types = blast_result_column_types
+        if (isTRUE(slurp)) {
+          # Try to read the BLAST data
+          rlang::try_fetch(
+            expr = {
+              blast_hit_data <-
+                read_blast_tsv(
+                  tmp_out,
+                  col_names = names(blast_result_column_types),
+                  col_types = blast_result_column_types
+                )
+              readr::stop_for_problems(blast_hit_data)
+              # NOTE: since we specify col_names and col_types, if there are no
+              # rows, this will be the good default value.
+              blast_hit_data
+            },
+            # If there are any problems reading the data, report the error and
+            # return
+            # the default value.
+            error = function(error_condition) {
+              parse_failed_callback(
+                query_path = query_path,
+                db_path = db_path,
+                error_condition = error_condition,
+                command = blast_executable,
+                args = blast_args,
+                stderr = process_result$stderr
               )
-            readr::stop_for_problems(blast_hit_data)
-            # NOTE: since we specify col_names and col_types, if there are no
-            # rows, this will be the good default value.
-            blast_hit_data
-          },
-          # If there are any problems reading the data, report the error and
-          # return
-          # the default value.
-          error = function(error_condition) {
-            parse_failed_callback(
-              query_path = query_path,
-              db_path = db_path,
-              error_condition = error_condition,
-              command = blast_executable,
-              args = blast_args,
-              stderr = process_result$stderr
-            )
-            empty_blast_result_callback()
-          }
-        )
+              empty_blast_result_callback()
+            }
+          )
+        } else {
+          # If we are not slurping, then return NULL
+          NULL
+        }
       }
     }
   )
 
-  result <- dplyr::bind_rows(blast_hits_list)
-  checkmate::assert_names(
-    colnames(result),
-    permutation.of = names(blast_result_column_types)
-  )
+  if (isTRUE(slurp)) {
+    result <- dplyr::bind_rows(blast_hits_list)
+    checkmate::assert_names(
+      colnames(result),
+      permutation.of = names(blast_result_column_types)
+    )
 
-  # NOTE: this data frame may have zero rows. The caller will need to handle it.
-  result
+    # NOTE: this data frame may have zero rows. The caller will need to handle it.
+    result
+  } else {
+    NULL
+  }
 }
