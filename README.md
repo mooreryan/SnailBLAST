@@ -11,24 +11,24 @@ handling. Faster than a speeding snail, but just as reliable.
 
 You can install the development version of SnailBLAST like so:
 
-``` r
-# If you don't already have "remotes" installed, uncomment this line:
-# install.packages("remotes")
+```r
+# If you don't already have "pak" installed, uncomment this line:
+# install.packages("pak")
 
-remotes::install_github("mooreryan/SnailBLAST")
+pak::pak("https://github.com/mooreryan/SnailBLAST")
 ```
 
 ## Example
 
 Here is a basic example that runs `blastn` on the query `a.fasta` against the DB named `db`.
 
-``` r
+```r
 SnailBLAST::crawl("blastn", "/path/to/a.fasta", "/path/to/db")
 ```
 
 Here is a more involved example that shows some of the optional arguments you might use.
 
-``` r
+```r
 SnailBLAST::crawl(
   # The name of the BLAST executable you want to run. We will try to find it on
   # your PATH
