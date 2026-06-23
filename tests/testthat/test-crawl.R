@@ -751,6 +751,9 @@ test_that("crawl integration test with real BLAST data (multisession plan)", {
   # Skip if BLAST is not available
   skip_if(sys_which("blastn") == "", "blastn not found on PATH")
 
+  # NOTE: this requires that the SnailBLAST pkg be installed so that the
+  # multisession plan workers can access it.
+
   run_test <- function() {
     # Modify the future backend only within this function
     with(future::plan(future::multisession, workers = 2), local = TRUE)
