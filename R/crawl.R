@@ -222,15 +222,17 @@ read_blast_tsv <- function(file, col_names, col_types) {
 
 #' Crawl BLAST databases with a set of query files
 #'
-#' Run a BLAST executable for every combination of query file and BLAST DB
-#' base path and return the combined parsed results as a tibble. This function
+#' Run a BLAST executable for every combination of query file and BLAST DB base
+#' path and return the combined parsed results as a tibble. This function
 #' constructs the appropriate command-line arguments (including a -outfmt 6
-#' short-format specifier), invokes the BLAST executable, parses the TSV BLAST output and binds all results together.
+#' short-format specifier), invokes the BLAST executable, parses the TSV BLAST
+#' output and binds all results together.
 #'
-#' The function validates inputs and supports user callbacks for two
-#' failure modes: when a BLAST job exits with non-zero status, and when parse
-#' of the BLAST stdout fails. Parallel execution across query/DB pairs is
-#' supported via the future package, so be sure to set a plan before running this function like \code{future::plan(future::multisession, workers = 2)}.
+#' The function validates inputs and supports callbacks for successful BLAST
+#' jobs, BLAST failures (non-zero exit status), and parse failures (that is when
+#' parsing the blast output fails). Parallel execution across query/DB pairs is
+#' supported via the future package, so be sure to set a plan before running
+#' this function like \code{future::plan(future::multisession, workers = 2)}.
 #'
 #' @param blast_executable \code{[character(1)]}\cr
 #'   Name of the BLAST executable to run (e.g. \code{"blastn"}, \code{"blastp"}).
@@ -270,6 +272,13 @@ read_blast_tsv <- function(file, col_names, col_types) {
 #'   Function called when parsing the BLAST stdout fails. Called as
 #'   \code{parse_failed_callback(query_path, db_path, error_condition, command,
 #'   args, stderr)}. The default is a no-op function.
+#' @param job_succeeded_callback \code{[function]}\cr
+#'   Function called after a BLAST job exits successfully and before its output
+#'   is parsed or the worker returns. Called as
+#'   \code{job_succeeded_callback(query_path, db_path, output_path, job_id)}.
+#'   The integer \code{job_id} is unique within this \code{crawl()} call. If
+#'   the callback errors, the crawl fails and the job output is retained.
+#'   The default is a no-op function.
 #'
 #' @return A tibble combining the parsed BLAST hits from all successful
 #'   query/DB runs. Column names correspond to the selected format specifiers
@@ -335,6 +344,12 @@ crawl <- function(
     command,
     args,
     stderr
+  ) {},
+  job_succeeded_callback = function(
+    query_path,
+    db_path,
+    output_path,
+    job_id
   ) {}
 ) {
   blast_executable <- sys_which(
@@ -364,6 +379,10 @@ crawl <- function(
   checkmate::assert_false(user_provided_outfmt_argument)
 
   # Check callbacks
+  checkmate::assert_function(
+    job_succeeded_callback,
+    args = c("query_path", "db_path", "output_path", "job_id")
+  )
   checkmate::assert_function(
     job_failed_callback,
     args = c(
@@ -462,6 +481,8 @@ crawl <- function(
   blast_hits_list <- future.apply::future_mapply(
     query_db_pairs$query_path,
     query_db_pairs$db_path,
+    # This functions as the job_id for the job success callack
+    seq_len(nrow(query_db_pairs)),
     # These two args make mapply work like lapply so we get back a list
     SIMPLIFY = FALSE,
     USE.NAMES = FALSE,
@@ -474,18 +495,32 @@ crawl <- function(
       run_process = run_process,
       read_blast_tsv = read_blast_tsv,
       make_tempfile = make_tempfile,
-      maybe_unlink = maybe_unlink
+      maybe_unlink = maybe_unlink,
+      job_succeeded_callback = job_succeeded_callback
     ),
     FUN = function(
       query_path,
       db_path,
+      job_id,
       run_process,
       read_blast_tsv,
       make_tempfile,
-      maybe_unlink
+      maybe_unlink,
+      job_succeeded_callback
     ) {
       tmp_out <- make_tempfile()
-      on.exit(maybe_unlink(tmp_out), add = TRUE)
+      # Control whether to delete the tmp_out file. It is mainly here to ensure
+      # that a failing job_succeeded_callback doesn't cause the output to be
+      # deleted.
+      preserve_output <- FALSE
+      on.exit(
+        # Note that the value of preserve_output will be looked on at exit time,
+        # so you can set it later to affect the on exit behavior.
+        if (!isTRUE(preserve_output)) {
+          maybe_unlink(tmp_out)
+        },
+        add = TRUE
+      )
 
       blast_args <- append(
         c(
@@ -527,6 +562,15 @@ crawl <- function(
         )
         empty_blast_result_callback()
       } else {
+        preserve_output <- TRUE
+        job_succeeded_callback(
+          query_path = query_path,
+          db_path = db_path,
+          output_path = tmp_out,
+          job_id = job_id
+        )
+        preserve_output <- FALSE
+
         if (isTRUE(slurp)) {
           # Try to read the BLAST data
           rlang::try_fetch(

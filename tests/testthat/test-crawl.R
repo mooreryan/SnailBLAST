@@ -251,6 +251,24 @@ test_that("crawl validates callback functions", {
       parse_failed_callback = function(wrong_args) {}
     )
   )
+
+  expect_checkmate_error(
+    crawl(
+      "blastn",
+      temp_query,
+      temp_db,
+      job_succeeded_callback = "not_a_function"
+    )
+  )
+
+  expect_checkmate_error(
+    crawl(
+      "blastn",
+      temp_query,
+      temp_db,
+      job_succeeded_callback = function(wrong_args) {}
+    )
+  )
 })
 
 test_that("crawl handles job failures", {
@@ -263,6 +281,7 @@ test_that("crawl handles job failures", {
   on.exit(unlink(temp_db), add = TRUE)
 
   failed_jobs <- list()
+  successful_jobs <- list()
 
   with_mocked_bindings(
     {
@@ -270,6 +289,14 @@ test_that("crawl handles job failures", {
         "blastn",
         temp_query,
         temp_db,
+        job_succeeded_callback = function(
+          query_path,
+          db_path,
+          output_path,
+          job_id
+        ) {
+          successful_jobs <<- append(successful_jobs, list(job_id))
+        },
         job_failed_callback = function(
           query_path,
           db_path,
@@ -295,6 +322,7 @@ test_that("crawl handles job failures", {
       )
 
       expect_length(failed_jobs, 1)
+      expect_length(successful_jobs, 0)
       expect_equal(failed_jobs[[1]]$query, temp_query)
       expect_equal(failed_jobs[[1]]$db, temp_db)
       expect_equal(failed_jobs[[1]]$status, 1)
@@ -311,6 +339,171 @@ test_that("crawl handles job failures", {
       list(status = 1, stdout = "", stderr = "error message")
     }
   )
+})
+
+describe("successful-job callback", {
+  it("runs after success with the correct arguments", {
+    temp_query <- tempfile(fileext = ".fasta")
+    writeLines(">test\nACGT", temp_query)
+    on.exit(unlink(temp_query))
+
+    temp_db <- make_temp_db()
+    on.exit(unlink(temp_db), add = TRUE)
+    output_directory <- tempfile()
+    dir.create(output_directory)
+    on.exit(unlink(output_directory, recursive = TRUE), add = TRUE)
+
+    callback_jobs <- list()
+
+    with_mocked_bindings(
+      {
+        crawl(
+          blast_executable = "blastn",
+          query_paths = temp_query,
+          db_paths = temp_db,
+          output_directory = output_directory,
+          slurp = FALSE,
+          job_succeeded_callback = function(
+            query_path,
+            db_path,
+            output_path,
+            job_id
+          ) {
+            callback_jobs <<- append(
+              callback_jobs,
+              list(list(
+                query_path = query_path,
+                db_path = db_path,
+                output_path = output_path,
+                job_id = job_id,
+                output_exists = file.exists(output_path)
+              ))
+            )
+          }
+        )
+      },
+      sys_which = function(...) "/usr/bin/blastn",
+      run_process = function(command, args, ...) {
+        output_path <- args[match("-out", args) + 1]
+        writeLines("raw BLAST output", output_path)
+        list(status = 0, stdout = "", stderr = "")
+      }
+    )
+
+    expect_length(object = callback_jobs, n = 1)
+    expect_equal(object = callback_jobs[[1]]$query_path, expected = temp_query)
+    expect_equal(object = callback_jobs[[1]]$db_path, expected = temp_db)
+    expect_true(object = callback_jobs[[1]]$output_exists)
+    expect_equal(object = callback_jobs[[1]]$job_id, expected = 1)
+    expect_true(object = file.exists(callback_jobs[[1]]$output_path))
+  })
+
+  it("propagates callback errors and retains the raw output", {
+    temp_query <- tempfile(fileext = ".fasta")
+    writeLines(">test\nACGT", temp_query)
+    on.exit(unlink(temp_query))
+
+    temp_db <- make_temp_db()
+    on.exit(unlink(temp_db), add = TRUE)
+    callback_output_path <- NULL
+
+    with_mocked_bindings(
+      {
+        suppressWarnings(expect_error(
+          crawl(
+            blast_executable = "blastn",
+            query_paths = temp_query,
+            db_paths = temp_db,
+            job_succeeded_callback = function(
+              query_path,
+              db_path,
+              output_path,
+              job_id
+            ) {
+              callback_output_path <<- output_path
+              stop("callback failure")
+            }
+          ),
+          "callback failure"
+        ))
+      },
+      sys_which = function(...) "/usr/bin/blastn",
+      run_process = function(command, args, ...) {
+        output_path <- args[match("-out", args) + 1L]
+        writeLines("raw BLAST output", output_path)
+        list(status = 0, stdout = "", stderr = "")
+      }
+    )
+
+    expect_true(object = file.exists(callback_output_path))
+    unlink(callback_output_path)
+  })
+
+  it("assigns unique job identifiers and output paths in parallel", {
+    skip_on_os("windows")
+    skip_if(!future::supportsMulticore())
+
+    query_paths <- c(
+      testthat::test_path("test_data", "real_queries_1.fasta"),
+      testthat::test_path("test_data", "real_queries_2.fasta")
+    )
+    db_paths <- c(
+      testthat::test_path("test_data", "real_db_1"),
+      testthat::test_path("test_data", "real_db_2")
+    )
+    output_directory <- tempfile()
+    dir.create(output_directory)
+    on.exit(unlink(output_directory, recursive = TRUE))
+    record_directory <- tempfile()
+    dir.create(record_directory)
+    on.exit(unlink(record_directory, recursive = TRUE), add = TRUE)
+
+    with(future::plan(future::multicore, workers = 2), local = TRUE)
+    with_mocked_bindings(
+      {
+        crawl(
+          blast_executable = "blastn",
+          query_paths = query_paths,
+          db_paths = db_paths,
+          output_directory = output_directory,
+          slurp = FALSE,
+          job_succeeded_callback = function(
+            query_path,
+            db_path,
+            output_path,
+            job_id
+          ) {
+            saveRDS(
+              object = list(output_path = output_path, job_id = job_id),
+              file = file.path(record_directory, paste0(job_id, ".rds"))
+            )
+          }
+        )
+      },
+      sys_which = function(...) "/usr/bin/blastn",
+      run_process = function(command, args, ...) {
+        output_path <- args[match("-out", args) + 1]
+        writeLines("raw BLAST output", output_path)
+        list(status = 0, stdout = "", stderr = "")
+      }
+    )
+
+    record_paths <- list.files(
+      path = record_directory,
+      pattern = "[.]rds$",
+      full.names = TRUE
+    )
+    callback_jobs <- lapply(record_paths, readRDS)
+
+    expect_length(object = callback_jobs, n = 4)
+    expect_equal(
+      object = sort(vapply(callback_jobs, `[[`, integer(1), "job_id")),
+      expected = seq_len(4)
+    )
+    output_paths <- vapply(callback_jobs, `[[`, character(1), "output_path")
+    expect_length(object = unique(output_paths), n = 4)
+    expect_true(object = all(file.exists(output_paths)))
+  })
 })
 
 test_that("crawl handles parse failures gracefully", {

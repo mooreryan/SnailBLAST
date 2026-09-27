@@ -20,6 +20,8 @@ crawl(
  },
   parse_failed_callback = function(query_path, db_path, error_condition, command, args,
     stderr) {
+ },
+  job_succeeded_callback = function(query_path, db_path, output_path, job_id) {
  }
 )
 }
@@ -72,6 +74,14 @@ exit_status, command, args, stderr)}. The default is a no-op function.}
 Function called when parsing the BLAST stdout fails. Called as
 \code{parse_failed_callback(query_path, db_path, error_condition, command,
 args, stderr)}. The default is a no-op function.}
+
+\item{job_succeeded_callback}{\code{[function]}\cr
+Function called after a BLAST job exits successfully and before its output
+is parsed or the worker returns. Called as
+\code{job_succeeded_callback(query_path, db_path, output_path, job_id)}.
+The integer \code{job_id} is unique within this \code{crawl()} call. If
+the callback errors, the crawl fails and the job output is retained.
+The default is a no-op function.}
 }
 \value{
 A tibble combining the parsed BLAST hits from all successful
@@ -82,16 +92,18 @@ A tibble combining the parsed BLAST hits from all successful
   produce no hits).
 }
 \description{
-Run a BLAST executable for every combination of query file and BLAST DB
-base path and return the combined parsed results as a tibble. This function
+Run a BLAST executable for every combination of query file and BLAST DB base
+path and return the combined parsed results as a tibble. This function
 constructs the appropriate command-line arguments (including a -outfmt 6
-short-format specifier), invokes the BLAST executable, parses the TSV BLAST output and binds all results together.
+short-format specifier), invokes the BLAST executable, parses the TSV BLAST
+output and binds all results together.
 }
 \details{
-The function validates inputs and supports user callbacks for two
-failure modes: when a BLAST job exits with non-zero status, and when parse
-of the BLAST stdout fails. Parallel execution across query/DB pairs is
-supported via the future package, so be sure to set a plan before running this function like \code{future::plan(future::multisession, workers = 2)}.
+The function validates inputs and supports callbacks for successful BLAST
+jobs, BLAST failures (non-zero exit status), and parse failures (that is when
+parsing the blast output fails). Parallel execution across query/DB pairs is
+supported via the future package, so be sure to set a plan before running
+this function like \code{future::plan(future::multisession, workers = 2)}.
 }
 \examples{
 \dontrun{
